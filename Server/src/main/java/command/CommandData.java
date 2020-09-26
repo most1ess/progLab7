@@ -1,5 +1,7 @@
 package command;
 
+import person.Person;
+
 import java.io.Serializable;
 
 public class CommandData implements Serializable {
@@ -7,6 +9,16 @@ public class CommandData implements Serializable {
     private String name;
     private String param1;
     private String param2;
+
+    public Person getPerson() {
+        return person;
+    }
+
+    public void setPerson(Person person) {
+        this.person = person;
+    }
+
+    private Person person;
 
     public String getHashedPassword() {
         return hashedPassword;

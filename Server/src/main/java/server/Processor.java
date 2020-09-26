@@ -9,18 +9,32 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.DatagramChannel;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 public class Processor {
+    public static final Object synchronizer = new Object();
     private Logger logger;
     private People collection = new People();
     private SocketAddress socketAddress;
     private DatagramChannel datagramChannel;
     private CommandData commandData;
+
+    public void setResult(String result) {
+        this.result = result;
+    }
+
     private String result;
     private boolean workingStatus = true;
+    private Receiver<CommandData> commandDataReceiver = new Receiver<>(this);
+    private ForkJoinPool receivePool = ForkJoinPool.commonPool();
+    private ExecutorService handlePool = Executors.newCachedThreadPool();
+    private Callable<String> task;
+    private Future<String> futureResult;
+    private ForkJoinPool sendPool = ForkJoinPool.commonPool();
+    private Sender sender = new Sender(this);
 
     public String getFileName() {
         return fileName;
@@ -73,17 +87,20 @@ public class Processor {
             Connector.connect(this);
             if (!createDatabase()) System.exit(1);
             if (!database.load()) System.exit(1);
+
             while(workingStatus) {
+                commandDataReceiver = new Receiver<>(this);
+                sender = new Sender(this);
                 System.out.println("Ожидание данных от клиента...");
-                commandData = Receiver.<CommandData>receive(this);
+                commandData = receivePool.invoke(commandDataReceiver);
                 logger.log(Level.INFO, "Получена команда от клиента.");
-                System.out.println("Получена команда " + this.commandData.getName() + ".");
+                System.out.println("Получена команда " + commandData.getName() + ".");
                 System.out.println("Обработка команды...");
                 handle(commandData.getName());
                 logger.log(Level.INFO, "Команда обработана.");
                 System.out.println("Команда обработана.");
                 System.out.println("Отправление данных получателю...");
-                Sender.send(this);
+                sendPool.invoke(sender);
                 logger.log(Level.INFO, "Данные отправлены получателю.");
                 System.out.println("Данные успешно отправлены.\n");
             }
@@ -112,67 +129,52 @@ public class Processor {
             }
             switch (name) {
                 case "registerUser":
-                    result = (new RegisterUser(this)).execute();
+                    task = () -> (result = (new RegisterUser(this)).execute());
                     break;
                 case "loginUser":
-                    result = (new LoginUser(this)).execute();
+                    task = () -> result = (new LoginUser(this)).execute();
                     break;
                 case "help":
-                    result = (new Help()).execute();
+                    task = () -> (result = (new Help(this)).execute());
                     break;
                 case "info":
-                    result = (new Info(this)).execute();
+                    task = () -> result = (new Info(this)).execute();
                     break;
                 case "show":
-                    result = (new Show(this).execute());
+                    task = () -> result = (new Show(this).execute());
                     break;
                 case "clear":
-                    result = (new Clear(this).execute());
+                    task = () -> result =  (new Clear(this).execute());
                     break;
                 case "remove_key":
-                    result = (new RemoveKey(this).execute());
+                    task = () -> result = (new RemoveKey(this).execute());
                     break;
                 case "remove_greater":
-                    result = (new RemoveGreater(this).execute());
+                    task = () -> result = (new RemoveGreater(this).execute());
                     break;
                 case "replace_if_lower":
-                    result = (new ReplaceIfLower(this).execute());
+                    task = () -> result = (new ReplaceIfLower(this).execute());
                     break;
                 case "remove_greater_key":
-                    result = (new RemoveGreaterKey(this).execute());
+                    task = () -> result = (new RemoveGreaterKey(this).execute());
                     break;
                 case "group_counting_by_creation_date":
-                    result = (new GroupCountingByCreationDate(this).execute());
+                    task = () -> result = (new GroupCountingByCreationDate(this).execute());
                     break;
                 case "count_greater_than_location":
-                    result = (new CountGreaterThanLocation(this).execute());
+                    task = () -> result = (new CountGreaterThanLocation(this).execute());
                     break;
                 case "filter_starts_with_name":
-                    result = (new FilterStartsWithName(this).execute());
+                    task = () -> result = (new FilterStartsWithName(this).execute());
                     break;
                 case "insert":
-                    Insert insert = new Insert(this);
-                    if (!insert.exists()) {
-                        result = "Введите информацию о добавляемом элементе.\n";
-                        Sender.send(this);
-                        insert.setPerson(Receiver.<Person>receive(this));
-                        result = insert.execute();
-                    } else {
-                        result = "Невозможно добавить элемент с указанным ключом. Элемент с таким ключом уже присутствует в коллекции!\n";
-                    }
+                    task = () -> result = (new Insert(this).execute());
                     break;
                 case "update":
-                    Update update = new Update(this);
-                    if (update.exists()) {
-                        result = "Введите информацию о добавляемом элементе.\n";
-                        Sender.send(this);
-                        update.setPerson(Receiver.<Person>receive(this));
-                        result = update.execute();
-                    } else {
-                        result = "Элемента с указанным ключом нет в коллекции.\n";
-                    }
+                    task = () -> result = (new Update(this).execute());
                     break;
             }
+            handlePool.submit(task);
         } catch(ClassCastException e) {
             logger.log(Level.SEVERE, "Ошибка классов.");
             e.printStackTrace();

@@ -4,15 +4,16 @@ import person.Person;
 
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ForkJoinTask;
+import java.util.concurrent.RecursiveTask;
 
-public class Receiver {
-    /**
-     * Получение и десериализация данных от пользователя.
-     * @param processor процессор сервера.
-     * @param <T> тип получаемых данных.
-     * @return полученный объект.
-     * @throws ClassNotFoundException ошибка ненахождения класса.
-     */
+public class Receiver<T> extends RecursiveTask<T> {
+    private Processor processor;
+
+    public Receiver(Processor processor) {
+        this.processor = processor;
+    }
+
     public static <T> T receive(Processor processor) throws ClassNotFoundException {
         ByteBuffer buffer = ByteBuffer.allocate(5000);
         try {
@@ -30,5 +31,15 @@ public class Receiver {
         }
         buffer.clear();
         return obj;
+    }
+
+    @Override
+    protected T compute() {
+        try {
+            return receive(processor);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

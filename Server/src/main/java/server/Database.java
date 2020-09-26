@@ -203,8 +203,7 @@ public class Database {
             preparedStatement = connection.prepareStatement("DELETE FROM people WHERE coordinatex < ? AND login = ?;");
             preparedStatement.setDouble(1, coordinateX);
             preparedStatement.setString(2, processor.getCommandData().getLogin());
-            preparedStatement.execute();
-            return true;
+            return preparedStatement.execute();
         } catch(SQLException e) {
             e.printStackTrace();
             return false;
@@ -216,8 +215,7 @@ public class Database {
             preparedStatement = connection.prepareStatement("DELETE FROM people WHERE key > ? AND login = ?;");
             preparedStatement.setString(1, key);
             preparedStatement.setString(2, processor.getCommandData().getLogin());
-            preparedStatement.execute();
-            return true;
+            return preparedStatement.execute();
         } catch(SQLException e) {
             e.printStackTrace();
             return false;
@@ -272,6 +270,19 @@ public class Database {
         } catch(SQLException e) {
             e.printStackTrace();
             return false;
+        }
+    }
+
+    public int gainId(String key) {
+        try {
+            preparedStatement = connection.prepareStatement("SELECT * FROM people WHERE key = ?;");
+            preparedStatement.setString(1, key);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            resultSet.next();
+            return resultSet.getInt("id");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return 0;
         }
     }
 }

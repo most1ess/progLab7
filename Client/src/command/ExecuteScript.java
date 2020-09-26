@@ -29,7 +29,6 @@ public class ExecuteScript {
             if(scriptFile.canRead()) {
                 FileReader fileReader = new FileReader(fileName);
                 BufferedReader bufferedReader = new BufferedReader(fileReader);
-                scriptUtil = new ScriptUtil(bufferedReader);
                 String line = bufferedReader.readLine();
                 String[] splitLine;
                 while (line != null) {

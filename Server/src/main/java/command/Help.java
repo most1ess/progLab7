@@ -1,9 +1,18 @@
 package command;
 
+import server.Processor;
+
 public class Help extends Command {
+    private String result;
+    private Processor processor;
+
+    public Help(Processor processor) {
+        this.processor = processor;
+    }
+
     @Override
-    public synchronized String execute() {
-        return "Список доступных команд:" + "\n\n" +
+    public String execute() {
+        result = "Список доступных команд:" + "\n\n" +
         "help - вывод справки по доступным командам" + "\n\n" +
         "info - вывод информации о коллекции" + "\n\n" +
         "show - вывод всех элементов коллекции" + "\n\n" +
@@ -18,5 +27,7 @@ public class Help extends Command {
         "group_counting_by_creation_date - группировка данных по значению поля creation_date и вывод сгруппированных данных" + "\n\n" +
         "count_greater_than_location <location> - вывод количества элементов, значение поля location которых больше заданного" + "\n\n" +
         "filter_starts_with_name <name> - вывод всех элементов, значение поля name которых начинается с заданной подстроки" + "\n";
+        processor.setResult(result);
+        return result;
     }
 }

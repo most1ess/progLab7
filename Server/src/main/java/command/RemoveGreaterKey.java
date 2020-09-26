@@ -11,24 +11,33 @@ public class RemoveGreaterKey extends Command {
     private String key;
     private Database database;
     private String login;
+    private String result;
+    private Processor processor;
 
     public RemoveGreaterKey(Processor processor) {
-        collection = processor.getCollection().get();
+        synchronized (Processor.synchronizer) {
+            collection = processor.getCollection().get();
+        }
         key = processor.getCommandData().getParam1();
         database = processor.getDatabase();
         login = processor.getCommandData().getLogin();
+        this.processor = processor;
     }
 
     @Override
-    public synchronized String execute() {
-        if (collection.isEmpty()) {
-            return "Опа! А коллекция то пуста!\n";
-        } else {
-            if(database.removeGreaterKey(key))
-                if(collection.keySet().removeIf(k -> k.compareTo(key) > 0 && collection.get(k).getLogin().equals(login)))
-                    return ("Все объекты, ключ которых превышает " + key + ", успешно удалены.\n");
-                else return "Опа! А элементов таких и нет, оказывается!\n";
-            else return "При удалении элементов произошла ошибка!\n";
+    public String execute() {
+        synchronized (Processor.synchronizer) {
+            if (collection.isEmpty()) {
+                result = "Опа! А коллекция то пуста!\n";
+            } else {
+                if (database.removeGreaterKey(key))
+                    if (collection.keySet().removeIf(k -> k.compareTo(key) > 0 && collection.get(k).getLogin().equals(login)))
+                        result = ("Все объекты, ключ которых превышает " + key + ", успешно удалены.\n");
+                    else result = "Опа! А элементов таких и нет, оказывается!\n";
+                else result = "Опа! А элементов таких и нет, оказывается!\n";
+            }
         }
+        processor.setResult(result);
+        return result;
     }
 }

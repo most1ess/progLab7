@@ -7,26 +7,37 @@ import java.util.*;
 
 public class Show extends Command {
     private TreeMap<String, Person> collection;
+    private String result;
+    private Processor processor;
 
     public Show(Processor processor) {
-        collection = processor.getCollection().get();
+        synchronized (Processor.synchronizer) {
+            collection = processor.getCollection().get();
+        }
+        this.processor = processor;
     }
 
     @Override
     public String execute() {
         StringBuilder resBuilder = new StringBuilder();
-        if(collection.isEmpty()) {
-            return "Невозможно отобразить элементы коллекции. Коллекция пуста!\n";
-        } else {
-            TreeMap<Person, String> sortedRes = new TreeMap<>();
-            collection.entrySet()
-                    .forEach((e) -> sortedRes.put(e.getValue(), getString(e)));
-            sortedRes.forEach((key, value) -> resBuilder.append(value));
+        synchronized (Processor.synchronizer) {
+            if (collection.isEmpty()) {
+                result = "Невозможно отобразить элементы коллекции. Коллекция пуста!\n";
+                processor.setResult(result);
+                return result;
+            } else {
+                TreeMap<Person, String> sortedRes = new TreeMap<>();
+                collection.entrySet()
+                        .forEach((e) -> sortedRes.put(e.getValue(), getString(e)));
+                sortedRes.forEach((key, value) -> resBuilder.append(value));
+            }
         }
-        return resBuilder.toString();
+        result = resBuilder.toString();
+        processor.setResult(result);
+        return result;
     }
 
-    private synchronized String getString(Map.Entry<String, Person> entry) {
+    private String getString(Map.Entry<String, Person> entry) {
         StringBuilder resBuilder = new StringBuilder();
         resBuilder.append("КЛЮЧ ЭЛЕМЕНТА: ").append(entry.getKey()).append('\n');
         resBuilder.append("ID: ").append(entry.getValue().getId()).append('\n');

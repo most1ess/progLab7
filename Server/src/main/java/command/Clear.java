@@ -13,24 +13,33 @@ public class Clear extends Command {
     private TreeMap<String, Person> collection;
     private Database database;
     private String login;
+    private String result;
+    private Processor processor;
 
     public Clear(Processor processor) {
-        collection = processor.getCollection().get();
+        synchronized (Processor.synchronizer) {
+            collection = processor.getCollection().get();
+        }
         database = processor.getDatabase();
         login = processor.getCommandData().getLogin();
+        this.processor = processor;
     }
 
     @Override
-    public synchronized String execute() {
-        if (collection.isEmpty()) {
-            return "Невозможно очистить коллекцию. Коллекция уже пуста.\n";
-        } else {
-            if (database.clear()) {
-                collection.values().removeIf(person -> person.getLogin().equals(login));
-                return "Коллекция успешно очищена.\n";
+    public String execute() {
+        synchronized (Processor.synchronizer) {
+            if (collection.isEmpty()) {
+                result = "Невозможно очистить коллекцию. Коллекция уже пуста.\n";
             } else {
-                return "При очистке коллекции возникла ошибка.\n";
+                if (database.clear()) {
+                    collection.values().removeIf(person -> person.getLogin().equals(login));
+                    result = "Коллекция успешно очищена.\n";
+                } else {
+                    result = "При очистке коллекции возникла ошибка.\n";
+                }
             }
         }
+        processor.setResult(result);
+        return result;
     }
 }

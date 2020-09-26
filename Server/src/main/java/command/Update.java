@@ -13,6 +13,7 @@ public class Update extends Command {
     private Processor processor;
     private int oldId;
     private Database database;
+    private String result;
 
     public Person getPerson() {
         return person;
@@ -23,30 +24,45 @@ public class Update extends Command {
     }
 
     public Update(Processor processor) {
-        collection = processor.getCollection().get();
+        synchronized (Processor.synchronizer) {
+            collection = processor.getCollection().get();
+        }
         key = processor.getCommandData().getParam1();
         this.processor = processor;
         database = processor.getDatabase();
+        person = processor.getCommandData().getPerson();
     }
 
-    public synchronized boolean exists() {
-        if(collection.containsKey(key)) {
-            oldId = collection.get(key).getId();
-            return true;
-        } else return false;
-    } 
+    private boolean exists() {
+        synchronized (Processor.synchronizer) {
+            return collection.containsKey(key);
+        }
+    }
 
     @Override
-    public synchronized String execute() {
-        if(person.getCreationDate() == null) {
-            return "Элемент не был добавлен.\n";
+    public String execute() {
+        if (!exists()) {
+            result = "Элемента с указанным ключом нет в коллекции.\n";
+        } else if (person == null) {
+            result = "Введите информацию о добавляемом элементе.\n";
+        } else {
+            if (person.getCreationDate() == null) {
+                result = "Элемент не был добавлен.\n";
+                processor.setResult(result);
+                return result;
+            }
+            oldId = collection.get(key).getId();
+            person.setId(oldId);
+            if (database.remove(key) && database.put(key, person)) {
+                synchronized (Processor.synchronizer) {
+                    collection.remove(key);
+                    collection.put(key, person);
+                    processor.getCollection().set(collection);
+                }
+                result = "Элемент успешно изменён.\n";
+            } else result = "Во время изменения элемента произошла ошибка.\n";
         }
-        person.setId(oldId);
-        if(database.remove(key) && database.put(key, person)) {
-            collection.remove(key);
-            collection.put(key, person);
-            processor.getCollection().set(collection);
-            return "Элемент успешно изменён.\n";
-        } else return "Во время изменения элемента произошла ошибка.\n";
+        processor.setResult(result);
+        return result;
     }
 }

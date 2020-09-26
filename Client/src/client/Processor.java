@@ -144,7 +144,10 @@ public class Processor {
                     if (Receiver.receive(this)) {
                         UpdateUtil updateUtil = new UpdateUtil();
                         Person person = updateUtil.genPerson(login);
-                        Sender.send(this, person);
+                        commandData = new CommandData(splitInput[0], splitInput[1], person);
+                        commandData.setHashedPassword(hashedPassword);
+                        commandData.setLogin(login);
+                        Sender.send(this, commandData);
                     } else return false;
                     break;
                 case "insert":
@@ -152,11 +155,13 @@ public class Processor {
                     commandData.setHashedPassword(hashedPassword);
                     commandData.setLogin(login);
                     Sender.send(this, commandData);
-                    if (Receiver.receive(this)) {
-                        Person person;
+                    if(Receiver.receive(this)) {
                         InsertUtil insertUtil = new InsertUtil();
-                        person = insertUtil.genPerson(login);
-                        Sender.send(this, person);
+                        Person person = insertUtil.genPerson(login);
+                        commandData = new CommandData(splitInput[0], splitInput[1], person);
+                        commandData.setHashedPassword(hashedPassword);
+                        commandData.setLogin(login);
+                        Sender.send(this, commandData);
                     } else return false;
                     break;
                 case "execute_script":
