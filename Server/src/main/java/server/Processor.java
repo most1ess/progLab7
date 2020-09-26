@@ -129,54 +129,57 @@ public class Processor {
             }
             switch (name) {
                 case "registerUser":
-                    task = () -> (result = (new RegisterUser(this)).execute());
+                    task = () -> (new RegisterUser(this)).execute();
                     break;
                 case "loginUser":
-                    task = () -> result = (new LoginUser(this)).execute();
+                    task = () -> (new LoginUser(this)).execute();
                     break;
                 case "help":
-                    task = () -> (result = (new Help(this)).execute());
+                    task = () -> (new Help(this)).execute();
                     break;
                 case "info":
-                    task = () -> result = (new Info(this)).execute();
+                    task = () -> (new Info(this)).execute();
                     break;
                 case "show":
-                    task = () -> result = (new Show(this).execute());
+                    task = () -> (new Show(this).execute());
                     break;
                 case "clear":
-                    task = () -> result =  (new Clear(this).execute());
+                    task = () -> (new Clear(this).execute());
                     break;
                 case "remove_key":
-                    task = () -> result = (new RemoveKey(this).execute());
+                    task = () -> (new RemoveKey(this).execute());
                     break;
                 case "remove_greater":
-                    task = () -> result = (new RemoveGreater(this).execute());
+                    task = () -> (new RemoveGreater(this).execute());
                     break;
                 case "replace_if_lower":
-                    task = () -> result = (new ReplaceIfLower(this).execute());
+                    task = () -> (new ReplaceIfLower(this).execute());
                     break;
                 case "remove_greater_key":
-                    task = () -> result = (new RemoveGreaterKey(this).execute());
+                    task = () -> (new RemoveGreaterKey(this).execute());
                     break;
                 case "group_counting_by_creation_date":
-                    task = () -> result = (new GroupCountingByCreationDate(this).execute());
+                    task = () -> (new GroupCountingByCreationDate(this).execute());
                     break;
                 case "count_greater_than_location":
-                    task = () -> result = (new CountGreaterThanLocation(this).execute());
+                    task = () -> (new CountGreaterThanLocation(this).execute());
                     break;
                 case "filter_starts_with_name":
-                    task = () -> result = (new FilterStartsWithName(this).execute());
+                    task = () -> (new FilterStartsWithName(this).execute());
                     break;
                 case "insert":
-                    task = () -> result = (new Insert(this).execute());
+                    task = () -> (new Insert(this).execute());
                     break;
                 case "update":
-                    task = () -> result = (new Update(this).execute());
+                    task = () -> (new Update(this).execute());
                     break;
             }
-            handlePool.submit(task);
+            futureResult = handlePool.submit(task);
+            result = futureResult.get();
         } catch(ClassCastException e) {
             logger.log(Level.SEVERE, "Ошибка классов.");
+            e.printStackTrace();
+        } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
     }
