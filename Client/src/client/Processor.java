@@ -12,7 +12,6 @@ import java.nio.channels.DatagramChannel;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.sql.Connection;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.Scanner;
@@ -59,10 +58,10 @@ public class Processor {
         try (DatagramChannel datagramChannel = DatagramChannel.open()) {
             this.setDatagramChannel(datagramChannel);
             Connector.connect(this);
-            Database database = new Database();
-            database.signUser(this);
-            login = database.getLogin();
-            hashedPassword = Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-512").digest(database.getPassword().getBytes(StandardCharsets.UTF_8)));
+            User user = new User();
+            user.sign(this);
+            login = user.getLogin();
+            hashedPassword = Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-512").digest(user.getPassword().getBytes(StandardCharsets.UTF_8)));
             loop();
         } catch (IOException e) {
             System.out.println("!!!---ОШИБКА---!!!\n");

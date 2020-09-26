@@ -20,6 +20,11 @@ public class Processor {
     private People collection = new People();
     private SocketAddress socketAddress;
     private DatagramChannel datagramChannel;
+
+    public void setCommandData(CommandData commandData) {
+        this.commandData = commandData;
+    }
+
     private CommandData commandData;
 
     public void setResult(String result) {
@@ -28,12 +33,30 @@ public class Processor {
 
     private String result;
     private boolean workingStatus = true;
-    private Receiver<CommandData> commandDataReceiver = new Receiver<>(this);
+    private Receiver commandDataReceiver = new Receiver(this);
     private ForkJoinPool receivePool = ForkJoinPool.commonPool();
     private ExecutorService handlePool = Executors.newCachedThreadPool();
     private Callable<String> task;
     private Future<String> futureResult;
+
+    public ForkJoinPool getSendPool() {
+        return sendPool;
+    }
+
+    public void setSendPool(ForkJoinPool sendPool) {
+        this.sendPool = sendPool;
+    }
+
     private ForkJoinPool sendPool = ForkJoinPool.commonPool();
+
+    public Sender getSender() {
+        return sender;
+    }
+
+    public void setSender(Sender sender) {
+        this.sender = sender;
+    }
+
     private Sender sender = new Sender(this);
 
     public String getFileName() {
@@ -60,10 +83,10 @@ public class Processor {
      * Создание лога работы сервера.
      */
     private void createLog() {
-        try(FileInputStream ins = new FileInputStream("log.config")) {
+        try (FileInputStream ins = new FileInputStream("log.config")) {
             LogManager.getLogManager().readConfiguration(ins);
             logger = Logger.getLogger(Processor.class.getName());
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -78,51 +101,36 @@ public class Processor {
         System.out.println("Группа: Р3131\n\n");
         System.out.println("----------------------------------------\n");
 
-        try {
-            System.out.println("Создания лога работы сервера...");
-            createLog();
-            System.out.println("Лог работы сервера создан!\n");
-            logger.log(Level.INFO, "Начало логирования исполнения программы.");
-            System.out.println("\nНастройка подключения канала обмена датаграммами...");
-            Connector.connect(this);
-            if (!createDatabase()) System.exit(1);
-            if (!database.load()) System.exit(1);
 
-            while(workingStatus) {
-                commandDataReceiver = new Receiver<>(this);
-                sender = new Sender(this);
-                System.out.println("Ожидание данных от клиента...");
-                commandData = receivePool.invoke(commandDataReceiver);
-                logger.log(Level.INFO, "Получена команда от клиента.");
-                System.out.println("Получена команда " + commandData.getName() + ".");
-                System.out.println("Обработка команды...");
-                handle(commandData.getName());
-                logger.log(Level.INFO, "Команда обработана.");
-                System.out.println("Команда обработана.");
-                System.out.println("Отправление данных получателю...");
-                sendPool.invoke(sender);
-                logger.log(Level.INFO, "Данные отправлены получателю.");
-                System.out.println("Данные успешно отправлены.\n");
-            }
-        } catch(IOException e) {
-            logger.log(Level.SEVERE, "Ошибка ввода-вывода.");
-            e.printStackTrace();
-        } catch(ClassNotFoundException e) {
-            logger.log(Level.SEVERE, "Несоответствие классов.");
-            e.printStackTrace();
+        System.out.println("Создания лога работы сервера...");
+        createLog();
+        System.out.println("Лог работы сервера создан!\n");
+        logger.log(Level.INFO, "Начало логирования исполнения программы.");
+        System.out.println("\nНастройка подключения канала обмена датаграммами...");
+        Connector.connect(this);
+        if (!createDatabase()) System.exit(1);
+        if (!database.load()) System.exit(1);
+
+        while (workingStatus) {
+            commandDataReceiver = new Receiver(this);
+            sender = new Sender(this);
+            System.out.println("Ожидание данных от клиента...");
+            receivePool.invoke(commandDataReceiver);
         }
+
     }
 
     /**
      * Обработка полученных от пользователя данных.
+     *
      * @param name имя команды.
-     * @throws IOException ошибка ввода-вывода.
+     * @throws IOException            ошибка ввода-вывода.
      * @throws ClassNotFoundException ошибка ненахождения класса.
      */
-    public void handle(String name) throws IOException, ClassNotFoundException{
+    public void handle(String name) throws IOException, ClassNotFoundException {
         try {
             if (!name.equals("loginUser") && !name.equals("registerUser")) {
-                if(!database.checkUser(commandData.getLogin(), commandData.getHashedPassword())) {
+                if (!database.checkUser(commandData.getLogin(), commandData.getHashedPassword())) {
                     System.out.println("Ошибка авторизации пользователя.\nКоманда не может быть исполнена.\n");
                     return;
                 }
@@ -176,10 +184,16 @@ public class Processor {
             }
             futureResult = handlePool.submit(task);
             result = futureResult.get();
-        } catch(ClassCastException e) {
+            getLogger().log(Level.INFO, "Команда обработана.");
+            System.out.println("Команда обработана.");
+            System.out.println("Отправление данных получателю...");
+            getSendPool().invoke(getSender());
+        } catch (ClassCastException e) {
             logger.log(Level.SEVERE, "Ошибка классов.");
             e.printStackTrace();
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
             e.printStackTrace();
         }
     }
@@ -188,7 +202,7 @@ public class Processor {
         if (!unpackFileName()) return false;
         try {
             database = new Database(this);
-        } catch(NoSuchAlgorithmException e) {
+        } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
             return false;
         }
@@ -197,13 +211,13 @@ public class Processor {
     }
 
     private boolean unpackFileName() {
-        if(System.getenv("FILE_PATH") == null) {
+        if (System.getenv("FILE_PATH") == null) {
             System.out.println("Переменная окружения отсутствует! Коллекция не может быть загружена.");
             logger.log(Level.WARNING, "Переменная окружения отсутствует. Коллекция не может быть загружена.");
             return false;
         }
         fileName = System.getenv("FILE_PATH");
-        if(fileName.equals("")) {
+        if (fileName.equals("")) {
             System.out.println("Переменная окружения пуста! Коллекция не может быть загружена.");
             logger.log(Level.WARNING, "Переменная окружения пуста! Коллекция не может быть загружена.");
             return false;

@@ -4,7 +4,7 @@ import command.CommandData;
 
 import java.util.Scanner;
 
-public class Database {
+public class User {
     public String getLogin() {
         return login;
     }
@@ -16,7 +16,7 @@ public class Database {
     private String login = null;
     private String password = null;
 
-    public void signUser(Processor processor) {
+    public void sign(Processor processor) {
         String signStatus;
         Scanner sc = new Scanner(System.in);
 
@@ -30,12 +30,12 @@ public class Database {
                 signStatus = sc.nextLine();
             }
 
-            if (signStatus.equals("reg")) Sender.send(processor, registerUser());
-            else Sender.send(processor, loginUser());
+            if (signStatus.equals("reg")) Sender.send(processor, register());
+            else Sender.send(processor, login());
         } while (!Receiver.receive(processor));
     }
 
-    private CommandData registerUser() {
+    private CommandData register() {
         Scanner sc = new Scanner(System.in);
 
         System.out.print("Для регистрации введите имя пользователя:\n>");
@@ -45,10 +45,10 @@ public class Database {
             login = sc.nextLine();
         }
 
-        return new CommandData("registerUser", login, enterPassword());
+        return new CommandData("registerUser", login, enter());
     }
 
-    private CommandData loginUser() {
+    private CommandData login() {
         Scanner sc = new Scanner(System.in);
 
         System.out.print("Для авторизации введите имя пользователя:\n>");
@@ -58,10 +58,10 @@ public class Database {
             login = sc.nextLine();
         }
 
-        return new CommandData("loginUser", login, enterPassword());
+        return new CommandData("loginUser", login, enter());
     }
 
-    private String enterPassword() {
+    private String enter() {
         Scanner sc = new Scanner(System.in);
         String confirmPassword;
 
