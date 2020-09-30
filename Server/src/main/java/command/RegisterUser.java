@@ -12,18 +12,16 @@ public class RegisterUser extends Command {
     private String login;
     private String password;
     private Database database;
-    private String result;
-    private Processor processor;
 
-    public RegisterUser(Processor processor) {
-        login = processor.getCommandData().getParam1();
-        password = processor.getCommandData().getParam2();
+    public RegisterUser(Processor processor, CommandData commandData) {
+        login = commandData.getParam1();
+        password = commandData.getParam2();
         database = processor.getDatabase();
-        this.processor = processor;
     }
 
     @Override
     public String execute() {
+        String result;
         try {
             PreparedStatement preparedStatement = database.getConnection().prepareStatement("INSERT INTO userdata (login, password) VALUES (?, ?);");
             preparedStatement.setString(1, login);
@@ -34,7 +32,6 @@ public class RegisterUser extends Command {
             e.printStackTrace();
             result = "Ошибка регистрации! Попробуйте использовать другой логин.\n";
         }
-        processor.setResult(result);
         return result;
     }
 }

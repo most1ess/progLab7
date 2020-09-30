@@ -4,7 +4,6 @@ import person.Person;
 import server.Database;
 import server.Processor;
 
-import javax.xml.crypto.Data;
 import java.util.TreeMap;
 
 public class ReplaceIfLower extends Command {
@@ -13,23 +12,25 @@ public class ReplaceIfLower extends Command {
     private String value;
     private Database database;
     private String login;
-    private String result;
     private Processor processor;
+    private CommandData commandData;
 
-    public ReplaceIfLower(Processor processor) {
-        synchronized (Processor.synchronizer) {
+    public ReplaceIfLower(Processor processor, CommandData commandData) {
+        synchronized (processor.getSynchronizer()) {
             collection = processor.getCollection().get();
         }
-        key = processor.getCommandData().getParam1();
-        value = processor.getCommandData().getParam2();
+        key = commandData.getParam1();
+        value = commandData.getParam2();
         database = processor.getDatabase();
-        login = processor.getCommandData().getLogin();
+        login = commandData.getLogin();
         this.processor = processor;
+        this.commandData = commandData;
     }
 
     @Override
     public String execute() {
-        synchronized (Processor.synchronizer) {
+        String result;
+        synchronized (processor.getSynchronizer()) {
             if (collection.isEmpty()) {
                 result = ("Опа! А коллекция то пуста!\n");
             } else {
@@ -38,16 +39,14 @@ public class ReplaceIfLower extends Command {
                     valueInt = Integer.parseInt(value);
                 } catch (NumberFormatException e) {
                     result = "Введённый вами аргумент должен быть целым положительным числом!\n";
-                    processor.setResult(result);
                     return result;
                 }
                 if (valueInt <= 0) {
                     result = "Введённый вами аргумент должен быть целым положительным числом!\n";
-                    processor.setResult(result);
                     return result;
                 }
                 if (collection.get(key).getHeight() > valueInt) {
-                    if (database.replaceIfLower(key, valueInt)) {
+                    if (database.replaceIfLower(key, valueInt, commandData)) {
                         if (collection.get(key).getLogin().equals(login)) {
                             collection.get(key).setHeight(Integer.parseInt(value));
                             result = ("Рост успешно изменен.\n");
@@ -60,7 +59,6 @@ public class ReplaceIfLower extends Command {
                 }
             }
         }
-        processor.setResult(result);
         return result;
     }
 }

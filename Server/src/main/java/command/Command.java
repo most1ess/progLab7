@@ -2,7 +2,7 @@ package command;
 
 public abstract class Command {
     /**
-     * Исполнения команды.
+     * Исполнение команды.
      */
     public String execute() {
         return "добрый вечер";

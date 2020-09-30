@@ -10,7 +10,6 @@ public class Insert extends Command {
     private String key;
     private Person person;
     private Processor processor;
-    private String result;
 
     public Person getPerson() {
         return person;
@@ -20,23 +19,24 @@ public class Insert extends Command {
         this.person = person;
     }
 
-    public Insert(Processor processor) {
-        synchronized (Processor.synchronizer) {
+    public Insert(Processor processor, CommandData commandData) {
+        synchronized (processor.getSynchronizer()) {
             collection = processor.getCollection().get();
         }
-        key = processor.getCommandData().getParam1();
+        key = commandData.getParam1();
         this.processor = processor;
-        this.person = processor.getCommandData().getPerson();
+        this.person = commandData.getPerson();
     }
 
     private boolean exists() {
-        synchronized (Processor.synchronizer) {
+        synchronized (processor.getSynchronizer()) {
             return collection.containsKey(key);
         }
     }
 
     @Override
     public String execute() {
+        String result;
         if(exists()) {
             result = "Невозможно добавить элемент с указанным ключом. Элемент с таким ключом уже присутствует в коллекции!\n";
         } else {
@@ -45,11 +45,10 @@ public class Insert extends Command {
             } else {
                 if (person.getCreationDate() == null) {
                     result = "Элемент не был добвлен.\n";
-                    processor.setResult(result);
                     return result;
                 }
                 if (processor.getDatabase().put(key, person)) {
-                    synchronized (Processor.synchronizer) {
+                    synchronized (processor.getSynchronizer()) {
                         person.setId(processor.getDatabase().gainId(key));
                         collection.put(key, person);
                         processor.getCollection().set(collection);
@@ -58,7 +57,6 @@ public class Insert extends Command {
                 } else result = "Ошибка добавления элемента.\n";
             }
         }
-        processor.setResult(result);
         return result;
     }
 }

@@ -24,25 +24,7 @@ public class Processor {
     private boolean scriptMode;
     private DatagramSocket datagramSocket;
     private byte[] buf = new byte[65536];
-
-    public String getLogin() {
-        return login;
-    }
-
-    public void setLogin(String login) {
-        this.login = login;
-    }
-
     private String login;
-
-    public String getHashedPassword() {
-        return hashedPassword;
-    }
-
-    public void setHashedPassword(String hashedPassword) {
-        this.hashedPassword = hashedPassword;
-    }
-
     private String hashedPassword;
 
     /**
@@ -114,7 +96,8 @@ public class Processor {
                 case "show":
                 case "clear":
                 case "group_counting_by_creation_date":
-                    commandData = new CommandData(splitInput[0]);
+                case "thread":
+                    commandData = new CommandData(splitInput[0], this);
                     commandData.setHashedPassword(hashedPassword);
                     commandData.setLogin(login);
                     Sender.send(this, commandData);
@@ -124,40 +107,40 @@ public class Processor {
                 case "remove_greater_key":
                 case "count_greater_than_location":
                 case "filter_starts_with_name":
-                    commandData = new CommandData(splitInput[0], splitInput[1]);
+                    commandData = new CommandData(splitInput[0], splitInput[1], this);
                     commandData.setHashedPassword(hashedPassword);
                     commandData.setLogin(login);
                     Sender.send(this, commandData);
                     break;
                 case "replace_if_lower":
-                    commandData = new CommandData(splitInput[0], splitInput[1], splitInput[2]);
+                    commandData = new CommandData(splitInput[0], splitInput[1], splitInput[2], this);
                     commandData.setHashedPassword(hashedPassword);
                     commandData.setLogin(login);
                     Sender.send(this, commandData);
                     break;
                 case "update":
-                    commandData = new CommandData(splitInput[0], splitInput[1]);
+                    commandData = new CommandData(splitInput[0], splitInput[1], this);
                     commandData.setHashedPassword(hashedPassword);
                     commandData.setLogin(login);
                     Sender.send(this, commandData);
                     if (Receiver.receive(this)) {
                         UpdateUtil updateUtil = new UpdateUtil();
                         Person person = updateUtil.genPerson(login);
-                        commandData = new CommandData(splitInput[0], splitInput[1], person);
+                        commandData = new CommandData(splitInput[0], splitInput[1], person, this);
                         commandData.setHashedPassword(hashedPassword);
                         commandData.setLogin(login);
                         Sender.send(this, commandData);
                     } else return false;
                     break;
                 case "insert":
-                    commandData = new CommandData(splitInput[0], splitInput[1]);
+                    commandData = new CommandData(splitInput[0], splitInput[1], this);
                     commandData.setHashedPassword(hashedPassword);
                     commandData.setLogin(login);
                     Sender.send(this, commandData);
                     if(Receiver.receive(this)) {
                         InsertUtil insertUtil = new InsertUtil();
                         Person person = insertUtil.genPerson(login);
-                        commandData = new CommandData(splitInput[0], splitInput[1], person);
+                        commandData = new CommandData(splitInput[0], splitInput[1], person, this);
                         commandData.setHashedPassword(hashedPassword);
                         commandData.setLogin(login);
                         Sender.send(this, commandData);
@@ -177,6 +160,7 @@ public class Processor {
                             "Для просмотра списка команд введите 'help'.");
                     return false;
             }
+            if(commandData.getSocketAddress()==null) System.out.println("блять пиздец");
             Receiver.receive(this);
         } catch (ArrayIndexOutOfBoundsException e) {
             System.out.println("У введённой вами команды недостаточно аргументов! Чтобы посмотреть, какие аргументы принимает команда," +
@@ -220,5 +204,13 @@ public class Processor {
 
     public void setBuf(byte[] buf) {
         this.buf = buf;
+    }
+
+    public String getLogin() {
+        return login;
+    }
+
+    public String getHashedPassword() {
+        return hashedPassword;
     }
 }

@@ -31,18 +31,13 @@ public class Connector {
                         "Попробуйте ещё раз:\n>");
             }
         }
-        processor.setPort(portInt);
         SocketAddress socketAddress = new InetSocketAddress(portInt);
-        processor.setSocketAddress(socketAddress);
         try {
             DatagramChannel datagramChannel = DatagramChannel.open();
             datagramChannel.bind(socketAddress);
             processor.setDatagramChannel(datagramChannel);
         } catch (IOException e) {
-            processor.getLogger().log(Level.SEVERE, "Канал для передачи датаграмм не был открыт.");
-            System.out.println("\n!!!---ОШИБКА---!!!\n");
-            System.out.println("Во время открытия канала произошла ошибка. Выбранный порт занят.");
-            System.out.println("Дальнейшая работа программы не может быть продолжена.\n");
+            processor.getLogger().log(Level.SEVERE, "Ошибка!");
             e.printStackTrace();
             System.exit(1);
         }

@@ -11,28 +11,30 @@ public class RemoveKey extends Command {
     private String key;
     private Database database;
     private String login;
-    private String result;
     private Processor processor;
+    private CommandData commandData;
 
-    public RemoveKey(Processor processor) {
-        synchronized (Processor.synchronizer) {
+    public RemoveKey(Processor processor, CommandData commandData) {
+        synchronized (processor.getSynchronizer()) {
             collection = processor.getCollection().get();
         }
-        key = processor.getCommandData().getParam1();
+        key = commandData.getParam1();
         database = processor.getDatabase();
-        login = processor.getCommandData().getLogin();
+        login = commandData.getLogin();
         this.processor = processor;
+        this.commandData = commandData;
     }
 
     @Override
     public String execute() {
-        synchronized (Processor.synchronizer) {
+        String result;
+        synchronized (processor.getSynchronizer()) {
             if (collection.isEmpty())
                 result = "Невозможно удалить элемент с заданным ключом. Коллекция уже пуста.\n";
             else if (!collection.containsKey(key))
                 result = "Элемента с таким ключом нет в коллекции! Попробуйте ввести другой ключ.\n";
             else {
-                if (database.remove(key)) {
+                if (database.remove(key, commandData)) {
                     collection.keySet().removeIf(k -> k.equals(key) && collection.get(k).getLogin().equals(login));
                     result = ("Элемент с ключом " + key + " успешно удален!\n");
                 } else {
@@ -40,7 +42,6 @@ public class RemoveKey extends Command {
                 }
             }
         }
-        processor.setResult(result);
         return result;
     }
 }

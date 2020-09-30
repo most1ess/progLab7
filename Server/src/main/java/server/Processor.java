@@ -2,10 +2,8 @@ package server;
 
 import collection.People;
 import command.*;
-import person.Person;
 
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.DatagramChannel;
 import java.security.NoSuchAlgorithmException;
@@ -15,68 +13,17 @@ import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 public class Processor {
-    public static final Object synchronizer = new Object();
+    private final Object synchronizer = new Object();
     private Logger logger;
     private People collection = new People();
-    private SocketAddress socketAddress;
     private DatagramChannel datagramChannel;
-
-    public void setCommandData(CommandData commandData) {
-        this.commandData = commandData;
-    }
-
-    private CommandData commandData;
-
-    public void setResult(String result) {
-        this.result = result;
-    }
-
+    private boolean threadStatus = true;
     private String result;
-    private boolean workingStatus = true;
-    private Receiver commandDataReceiver = new Receiver(this);
     private ForkJoinPool receivePool = ForkJoinPool.commonPool();
     private ExecutorService handlePool = Executors.newCachedThreadPool();
     private Callable<String> task;
-    private Future<String> futureResult;
-
-    public ForkJoinPool getSendPool() {
-        return sendPool;
-    }
-
-    public void setSendPool(ForkJoinPool sendPool) {
-        this.sendPool = sendPool;
-    }
-
     private ForkJoinPool sendPool = ForkJoinPool.commonPool();
-
-    public Sender getSender() {
-        return sender;
-    }
-
-    public void setSender(Sender sender) {
-        this.sender = sender;
-    }
-
-    private Sender sender = new Sender(this);
-
-    public String getFileName() {
-        return fileName;
-    }
-
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
-    }
-
     private String fileName;
-
-    public Database getDatabase() {
-        return database;
-    }
-
-    public void setDatabase(Database database) {
-        this.database = database;
-    }
-
     private Database database;
 
     /**
@@ -87,6 +34,7 @@ public class Processor {
             LogManager.getLogManager().readConfiguration(ins);
             logger = Logger.getLogger(Processor.class.getName());
         } catch (Exception e) {
+            logger.log(Level.SEVERE, "Ошибка!");
             e.printStackTrace();
         }
     }
@@ -106,44 +54,46 @@ public class Processor {
         createLog();
         System.out.println("Лог работы сервера создан!\n");
         logger.log(Level.INFO, "Начало логирования исполнения программы.");
-        System.out.println("\nНастройка подключения канала обмена датаграммами...");
+        logger.log(Level.INFO, "\nНастройка подключения канала обмена датаграммами...");
         Connector.connect(this);
         if (!createDatabase()) System.exit(1);
         if (!database.load()) System.exit(1);
+        logger.log(Level.INFO,"Ожидание данных от клиента...");
 
-        while (workingStatus) {
-            commandDataReceiver = new Receiver(this);
-            sender = new Sender(this);
-            System.out.println("Ожидание данных от клиента...");
-            receivePool.invoke(commandDataReceiver);
+        while(true) {
+            if(threadStatus) {
+                threadStatus = false;
+                launchThread();
+            }
         }
+    }
 
+    public void launchThread() {
+        receivePool.invoke(new Receiver(this));
     }
 
     /**
      * Обработка полученных от пользователя данных.
      *
-     * @param name имя команды.
-     * @throws IOException            ошибка ввода-вывода.
-     * @throws ClassNotFoundException ошибка ненахождения класса.
      */
-    public void handle(String name) throws IOException, ClassNotFoundException {
+    public void handle(CommandData commandData, SocketAddress socketAddress) {
+        String name = commandData.getName();
         try {
             if (!name.equals("loginUser") && !name.equals("registerUser")) {
                 if (!database.checkUser(commandData.getLogin(), commandData.getHashedPassword())) {
-                    System.out.println("Ошибка авторизации пользователя.\nКоманда не может быть исполнена.\n");
+                    logger.log(Level.SEVERE, "Ошибка авторизации пользователя.\nКоманда не может быть исполнена.\n");
                     return;
                 }
             }
             switch (name) {
                 case "registerUser":
-                    task = () -> (new RegisterUser(this)).execute();
+                    task = () -> (new RegisterUser(this, commandData)).execute();
                     break;
                 case "loginUser":
-                    task = () -> (new LoginUser(this)).execute();
+                    task = () -> (new LoginUser(this, commandData)).execute();
                     break;
                 case "help":
-                    task = () -> (new Help(this)).execute();
+                    task = () -> (new Help()).execute();
                     break;
                 case "info":
                     task = () -> (new Info(this)).execute();
@@ -152,57 +102,55 @@ public class Processor {
                     task = () -> (new Show(this).execute());
                     break;
                 case "clear":
-                    task = () -> (new Clear(this).execute());
+                    task = () -> (new Clear(this, commandData).execute());
                     break;
                 case "remove_key":
-                    task = () -> (new RemoveKey(this).execute());
+                    task = () -> (new RemoveKey(this, commandData).execute());
                     break;
                 case "remove_greater":
-                    task = () -> (new RemoveGreater(this).execute());
+                    task = () -> (new RemoveGreater(this, commandData).execute());
                     break;
                 case "replace_if_lower":
-                    task = () -> (new ReplaceIfLower(this).execute());
+                    task = () -> (new ReplaceIfLower(this, commandData).execute());
                     break;
                 case "remove_greater_key":
-                    task = () -> (new RemoveGreaterKey(this).execute());
+                    task = () -> (new RemoveGreaterKey(this, commandData).execute());
                     break;
                 case "group_counting_by_creation_date":
                     task = () -> (new GroupCountingByCreationDate(this).execute());
                     break;
                 case "count_greater_than_location":
-                    task = () -> (new CountGreaterThanLocation(this).execute());
+                    task = () -> (new CountGreaterThanLocation(this, commandData).execute());
                     break;
                 case "filter_starts_with_name":
-                    task = () -> (new FilterStartsWithName(this).execute());
+                    task = () -> (new FilterStartsWithName(this, commandData).execute());
                     break;
                 case "insert":
-                    task = () -> (new Insert(this).execute());
+                    task = () -> (new Insert(this, commandData).execute());
                     break;
                 case "update":
-                    task = () -> (new Update(this).execute());
+                    task = () -> (new Update(this, commandData).execute());
                     break;
+                case "thread":
+                    task = () -> (new ThreadStart().execute());
             }
-            futureResult = handlePool.submit(task);
-            result = futureResult.get();
-            getLogger().log(Level.INFO, "Команда обработана.");
-            System.out.println("Команда обработана.");
-            System.out.println("Отправление данных получателю...");
-            getSendPool().invoke(getSender());
+            handlePool.execute(new TaskCollapser(task, this, socketAddress));
         } catch (ClassCastException e) {
-            logger.log(Level.SEVERE, "Ошибка классов.");
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
+            logger.log(Level.SEVERE, "Ошибка!");
             e.printStackTrace();
         }
     }
 
+    /**
+     * Подключение к БД.
+     * @return - было ли успешно произведено действие
+     */
     private boolean createDatabase() {
         if (!unpackFileName()) return false;
         try {
             database = new Database(this);
         } catch (NoSuchAlgorithmException e) {
+            logger.log(Level.SEVERE, "Ошибка!");
             e.printStackTrace();
             return false;
         }
@@ -210,6 +158,10 @@ public class Processor {
         return database.connect();
     }
 
+    /**
+     * Получение имени файла с данными для БД.
+     * @return - было ли успешно произведено действие
+     */
     private boolean unpackFileName() {
         if (System.getenv("FILE_PATH") == null) {
             System.out.println("Переменная окружения отсутствует! Коллекция не может быть загружена.");
@@ -233,18 +185,6 @@ public class Processor {
         this.collection = collection;
     }
 
-    public CommandData getCommandData() {
-        return commandData;
-    }
-
-    public SocketAddress getSocketAddress() {
-        return socketAddress;
-    }
-
-    public void setSocketAddress(SocketAddress socketAddress) {
-        this.socketAddress = socketAddress;
-    }
-
     public DatagramChannel getDatagramChannel() {
         return datagramChannel;
     }
@@ -261,6 +201,31 @@ public class Processor {
         return result;
     }
 
-    public void setPort(int portInt) {
+    public Object getSynchronizer() {
+        return synchronizer;
+    }
+
+    public void setThreadStatus(boolean threadStatus) {
+        this.threadStatus = threadStatus;
+    }
+
+    public void setResult(String result) {
+        this.result = result;
+    }
+
+    public ExecutorService getHandlePool() {
+        return handlePool;
+    }
+
+    public ForkJoinPool getSendPool() {
+        return sendPool;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public Database getDatabase() {
+        return database;
     }
 }

@@ -7,11 +7,10 @@ import java.util.*;
 
 public class Show extends Command {
     private TreeMap<String, Person> collection;
-    private String result;
     private Processor processor;
 
     public Show(Processor processor) {
-        synchronized (Processor.synchronizer) {
+        synchronized (processor.getSynchronizer()) {
             collection = processor.getCollection().get();
         }
         this.processor = processor;
@@ -20,10 +19,10 @@ public class Show extends Command {
     @Override
     public String execute() {
         StringBuilder resBuilder = new StringBuilder();
-        synchronized (Processor.synchronizer) {
+        String result;
+        synchronized (processor.getSynchronizer()) {
             if (collection.isEmpty()) {
                 result = "Невозможно отобразить элементы коллекции. Коллекция пуста!\n";
-                processor.setResult(result);
                 return result;
             } else {
                 TreeMap<Person, String> sortedRes = new TreeMap<>();
@@ -33,7 +32,6 @@ public class Show extends Command {
             }
         }
         result = resBuilder.toString();
-        processor.setResult(result);
         return result;
     }
 

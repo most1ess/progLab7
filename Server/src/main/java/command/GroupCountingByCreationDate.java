@@ -9,11 +9,10 @@ import java.util.stream.Collectors;
 
 public class GroupCountingByCreationDate extends Command {
     private TreeMap<String, Person> collection;
-    private String result;
     private Processor processor;
 
     public GroupCountingByCreationDate(Processor processor) {
-        synchronized (Processor.synchronizer) {
+        synchronized (processor.getSynchronizer()) {
             collection = processor.getCollection().get();
         }
         this.processor = processor;
@@ -21,7 +20,8 @@ public class GroupCountingByCreationDate extends Command {
 
     @Override
     public String execute() {
-        synchronized (Processor.synchronizer) {
+        String result;
+        synchronized (processor.getSynchronizer()) {
             if (collection.isEmpty()) {
                 result = "Опа! А коллекция то пуста!\n";
             } else {
@@ -36,7 +36,6 @@ public class GroupCountingByCreationDate extends Command {
                 result = resBuilder.toString();
             }
         }
-        processor.setResult(result);
         return result;
     }
 }

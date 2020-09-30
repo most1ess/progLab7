@@ -4,34 +4,33 @@ import person.Person;
 import server.Database;
 import server.Processor;
 
-import java.util.Iterator;
-import java.util.Map;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 public class Clear extends Command {
     private TreeMap<String, Person> collection;
     private Database database;
     private String login;
-    private String result;
     private Processor processor;
+    private CommandData commandData;
 
-    public Clear(Processor processor) {
-        synchronized (Processor.synchronizer) {
+    public Clear(Processor processor, CommandData commandData) {
+        synchronized (processor.getSynchronizer()) {
             collection = processor.getCollection().get();
         }
         database = processor.getDatabase();
-        login = processor.getCommandData().getLogin();
+        login = commandData.getLogin();
         this.processor = processor;
+        this.commandData = commandData;
     }
 
     @Override
     public String execute() {
-        synchronized (Processor.synchronizer) {
+        String result;
+        synchronized (processor.getSynchronizer()) {
             if (collection.isEmpty()) {
                 result = "Невозможно очистить коллекцию. Коллекция уже пуста.\n";
             } else {
-                if (database.clear()) {
+                if (database.clear(commandData)) {
                     collection.values().removeIf(person -> person.getLogin().equals(login));
                     result = "Коллекция успешно очищена.\n";
                 } else {
@@ -39,7 +38,6 @@ public class Clear extends Command {
                 }
             }
         }
-        processor.setResult(result);
         return result;
     }
 }

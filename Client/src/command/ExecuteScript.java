@@ -34,7 +34,7 @@ public class ExecuteScript {
                 while (line != null) {
                     splitLine = line.trim().split(" ");
                     if (splitLine[0].equals("insert") || splitLine[0].equals("update")) {
-                        CommandData commandData = new CommandData(splitLine[0], splitLine[1]);
+                        CommandData commandData = new CommandData(splitLine[0], splitLine[1], processor);
                         commandData.setHashedPassword(processor.getHashedPassword());
                         commandData.setLogin(processor.getLogin());
                         Sender.send(processor, commandData);

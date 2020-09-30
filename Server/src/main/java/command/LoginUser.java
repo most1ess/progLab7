@@ -3,7 +3,6 @@ package command;
 import server.Database;
 import server.Processor;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,18 +13,16 @@ public class LoginUser extends Command {
     private String login;
     private String password;
     private Database database;
-    private String result;
-    private Processor processor;
 
-    public LoginUser(Processor processor) {
-        login = processor.getCommandData().getParam1();
-        password = processor.getCommandData().getParam2();
+    public LoginUser(Processor processor, CommandData commandData) {
+        login = commandData.getParam1();
+        password = commandData.getParam2();
         database = processor.getDatabase();
-        this.processor = processor;
     }
 
     @Override
     public String execute() {
+        String result;
         try {
             PreparedStatement preparedStatement = database.getConnection().prepareStatement("SELECT * FROM userdata WHERE (login = ?);");
             preparedStatement.setString(1, login);
@@ -36,7 +33,6 @@ public class LoginUser extends Command {
                 System.out.println(Base64.getEncoder().encodeToString(database.getHash().digest(password.getBytes(StandardCharsets.UTF_8))));
                 System.out.println(resultSet.getString("password"));
                 result = "Ошибка авторизации. Неверный пароль.\n";
-                processor.setResult(result);
                 return result;
             }
             result = "Пользователь под логином " + login + " успешно авторизован!\n";
@@ -44,7 +40,6 @@ public class LoginUser extends Command {
             e.printStackTrace();
             result = "Ошибка авторизации. Неверный логин или пароль.\n";
         }
-        processor.setResult(result);
         return result;
     }
 }

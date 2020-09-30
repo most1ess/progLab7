@@ -5,17 +5,13 @@ import command.CommandData;
 import java.util.Scanner;
 
 public class User {
-    public String getLogin() {
-        return login;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
     private String login = null;
     private String password = null;
 
+    /**
+     * Авторизация пользователя.
+     * @param processor - процессор клиента
+     */
     public void sign(Processor processor) {
         String signStatus;
         Scanner sc = new Scanner(System.in);
@@ -30,12 +26,17 @@ public class User {
                 signStatus = sc.nextLine();
             }
 
-            if (signStatus.equals("reg")) Sender.send(processor, register());
-            else Sender.send(processor, login());
+            if (signStatus.equals("reg")) Sender.send(processor, register(processor));
+            else Sender.send(processor, login(processor));
         } while (!Receiver.receive(processor));
     }
 
-    private CommandData register() {
+    /**
+     * Регистрация.
+     * @param processor - процессор клиента
+     * @return - объект с данными о команде
+     */
+    private CommandData register(Processor processor) {
         Scanner sc = new Scanner(System.in);
 
         System.out.print("Для регистрации введите имя пользователя:\n>");
@@ -45,10 +46,15 @@ public class User {
             login = sc.nextLine();
         }
 
-        return new CommandData("registerUser", login, enter());
+        return new CommandData("registerUser", login, enter(), processor);
     }
 
-    private CommandData login() {
+    /**
+     * Логинирование
+     * @param processor - процессор клиента
+     * @return - объект с данными о команде
+     */
+    private CommandData login(Processor processor) {
         Scanner sc = new Scanner(System.in);
 
         System.out.print("Для авторизации введите имя пользователя:\n>");
@@ -58,9 +64,13 @@ public class User {
             login = sc.nextLine();
         }
 
-        return new CommandData("loginUser", login, enter());
+        return new CommandData("loginUser", login, enter(), processor);
     }
 
+    /**
+     * Ввод пароля
+     * @return - введенный пароль
+     */
     private String enter() {
         Scanner sc = new Scanner(System.in);
         String confirmPassword;
@@ -77,6 +87,14 @@ public class User {
             confirmPassword = sc.nextLine();
         } while(!password.equals(confirmPassword));
 
+        return password;
+    }
+
+    public String getLogin() {
+        return login;
+    }
+
+    public String getPassword() {
         return password;
     }
 }

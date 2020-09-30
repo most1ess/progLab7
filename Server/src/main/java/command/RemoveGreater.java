@@ -11,22 +11,24 @@ public class RemoveGreater extends Command {
     private String key;
     private Database database;
     private String login;
-    private String result;
     private Processor processor;
+    private CommandData commandData;
 
-    public RemoveGreater(Processor processor) {
-        synchronized (Processor.synchronizer) {
+    public RemoveGreater(Processor processor, CommandData commandData) {
+        synchronized (processor.getSynchronizer()) {
             collection = processor.getCollection().get();
         }
-        key = processor.getCommandData().getParam1();
+        key = commandData.getParam1();
         database = processor.getDatabase();
-        login = processor.getCommandData().getLogin();
+        login = commandData.getLogin();
         this.processor = processor;
+        this.commandData = commandData;
     }
 
     @Override
     public String execute() {
-        synchronized (Processor.synchronizer) {
+        String result;
+        synchronized (processor.getSynchronizer()) {
             if (collection.isEmpty()) {
                 result = "Опа! А коллекция то пуста!\n";
             } else {
@@ -35,17 +37,15 @@ public class RemoveGreater extends Command {
                     xCoordinate = Double.parseDouble(key);
                 } catch (NumberFormatException e) {
                     result = "Введённый вами аргумент должен быть числом!\n";
-                    processor.setResult(result);
                     return result;
                 }
-                if (database.removeGreater(xCoordinate))
+                if (database.removeGreater(xCoordinate, commandData))
                     if (collection.values().removeIf(person -> person.getCoordinates().getX() < xCoordinate && person.getLogin().equals(login)))
                         result = ("Все искомые объекты успешно удалены.\n");
                     else result = ("Опа! А объектов, удовлетворяющих условию, нет!\n");
                 else result = "Опа! А объектов, удовлетворяющих условию, нет!\n";
             }
         }
-        processor.setResult(result);
         return result;
     }
 }

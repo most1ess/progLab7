@@ -8,11 +8,10 @@ import java.util.TreeMap;
 public class Info extends Command {
     private TreeMap<String, Person> collection;
     private java.time.LocalDateTime creationDate;
-    private String result;
     private Processor processor;
 
     public Info(Processor processor) {
-        synchronized (Processor.synchronizer) {
+        synchronized (processor.getSynchronizer()) {
             collection = processor.getCollection().get();
             creationDate = processor.getCollection().getCreationDate();
             this.processor = processor;
@@ -21,13 +20,13 @@ public class Info extends Command {
 
     @Override
     public String execute() {
-        synchronized (Processor.synchronizer) {
+        String result;
+        synchronized (processor.getSynchronizer()) {
             result = "Вид коллекции: TreeMap" + '\n' +
                     "Тип хранимых значений: Person" + '\n' +
                     "Количество элементов: " + collection.size() + '\n' +
                     "Дата создания: " + creationDate.toString().replaceAll("T", " ") + '\n';
         }
-        processor.setResult(result);
         return result;
     }
 }

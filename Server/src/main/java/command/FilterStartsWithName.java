@@ -9,20 +9,20 @@ import java.util.regex.Pattern;
 public class FilterStartsWithName extends Command {
     private TreeMap<String, Person> collection;
     private String name;
-    private String result;
     private Processor processor;
 
-    public FilterStartsWithName(Processor processor) {
-        synchronized (Processor.synchronizer) {
+    public FilterStartsWithName(Processor processor, CommandData commandData) {
+        synchronized (processor.getSynchronizer()) {
             collection = processor.getCollection().get();
         }
-        name = processor.getCommandData().getParam1();
+        name = commandData.getParam1();
         this.processor = processor;
     }
 
     @Override
     public String execute() {
-        synchronized (Processor.synchronizer) {
+        String result;
+        synchronized (processor.getSynchronizer()) {
             if (collection.isEmpty()) {
                 result = "Опа! А колллекция то пуста!\n И элементов таких, получается, что нет :)\n";
             } else {
@@ -40,7 +40,6 @@ public class FilterStartsWithName extends Command {
                 result = resBuilder.toString();
             }
         }
-        processor.setResult(result);
         return result;
     }
 }

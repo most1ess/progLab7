@@ -1,8 +1,8 @@
 package server;
 
 import collection.People;
+import command.CommandData;
 import person.Coordinates;
-import person.Country;
 import person.Location;
 import person.Person;
 
@@ -11,8 +11,8 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.*;
-import java.time.ZoneId;
 import java.util.Properties;
+import java.util.logging.Level;
 
 public class Database {
     private Connection connection;
@@ -20,63 +20,6 @@ public class Database {
     private MessageDigest hash;
     private String propertiesFile;
     private Processor processor;
-
-    public Connection getConnection() {
-        return connection;
-    }
-
-    public void setConnection(Connection connection) {
-        this.connection = connection;
-    }
-
-    public PreparedStatement getPreparedStatement() {
-        return preparedStatement;
-    }
-
-    public void setPreparedStatement(PreparedStatement preparedStatement) {
-        this.preparedStatement = preparedStatement;
-    }
-
-    public MessageDigest getHash() {
-        return hash;
-    }
-
-    public void setHash(MessageDigest hash) {
-        this.hash = hash;
-    }
-
-    public String getPropertiesFile() {
-        return propertiesFile;
-    }
-
-    public void setPropertiesFile(String propertiesFile) {
-        this.propertiesFile = propertiesFile;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public String getSystemLogin() {
-        return systemLogin;
-    }
-
-    public void setSystemLogin(String systemLogin) {
-        this.systemLogin = systemLogin;
-    }
-
-    public String getSystemPassword() {
-        return systemPassword;
-    }
-
-    public void setSystemPassword(String systemPassword) {
-        this.systemPassword = systemPassword;
-    }
-
     private String url;
     private String systemLogin;
     private String systemPassword;
@@ -87,6 +30,10 @@ public class Database {
         propertiesFile = processor.getFileName();
     }
 
+    /**
+     * Загрузка данных для входа в БД.
+     * @return - было ли успешно произведено действие
+     */
     public boolean loadProperties() {
         try (FileInputStream propertiesInputStream = new FileInputStream(propertiesFile)) {
             Properties properties = new Properties();
@@ -96,22 +43,32 @@ public class Database {
             systemPassword = properties.getProperty("password");
             return true;
         } catch(IOException e) {
+            processor.getLogger().log(Level.SEVERE, "Ошибка!");
             e.printStackTrace();
             return false;
         }
     }
 
+    /**
+     * Подключение к БД.
+     * @return - было ли успешно произведено действие
+     */
     public boolean connect() {
         try {
             Class.forName("org.postgresql.Driver");
             connection = DriverManager.getConnection(url, systemLogin, systemPassword);
             return true;
         } catch(ClassNotFoundException | SQLException e) {
+            processor.getLogger().log(Level.SEVERE, "Ошибка!");
             e.printStackTrace();
             return false;
         }
     }
 
+    /**
+     * Загрузка коллекции из БД.
+     * @return - было ли успешно произведено действие
+     */
     public boolean load() {
         try {
             Statement statement = connection.createStatement();
@@ -145,11 +102,18 @@ public class Database {
             }
             return true;
         } catch(SQLException e) {
+            processor.getLogger().log(Level.SEVERE, "Ошибка!");
             e.printStackTrace();
             return false;
         }
     }
 
+    /**
+     * Добавление элемента в БД.
+     * @param key - ключ элемента
+     * @param person - элемент
+     * @return - было ли успешно произведено действие
+     */
     public boolean put(String key, Person person) {
         try {
             preparedStatement = connection.prepareStatement("INSERT INTO people (key, id, name, " +
@@ -181,81 +145,123 @@ public class Database {
             preparedStatement.execute();
             return true;
         } catch(SQLException e) {
+            processor.getLogger().log(Level.SEVERE, "Ошибка!");
             e.printStackTrace();
             return false;
         }
     }
 
-    public boolean clear() {
+    /**
+     * Очистка коллекции.
+     * @param commandData - объект с данными о команде
+     * @return - было ли успешно произведено действие
+     */
+    public boolean clear(CommandData commandData) {
         try {
             preparedStatement = connection.prepareStatement("DELETE FROM people WHERE id > 0 AND login = ?;");
-            preparedStatement.setString(1, processor.getCommandData().getLogin());
+            preparedStatement.setString(1, commandData.getLogin());
             preparedStatement.execute();
             return true;
         } catch (SQLException e) {
+            processor.getLogger().log(Level.SEVERE, "Ошибка!");
             e.printStackTrace();
             return false;
         }
     }
 
-    public boolean removeGreater(double coordinateX) {
+    /**
+     * Исполнение команды RemoveGreater.
+     * @param coordinateX - координата Х
+     * @param commandData - объект с данными о команде
+     * @return - было ли успешно произведено действие
+     */
+    public boolean removeGreater(double coordinateX, CommandData commandData) {
         try {
             preparedStatement = connection.prepareStatement("DELETE FROM people WHERE coordinatex < ? AND login = ?;");
             preparedStatement.setDouble(1, coordinateX);
-            preparedStatement.setString(2, processor.getCommandData().getLogin());
+            preparedStatement.setString(2, commandData.getLogin());
             return preparedStatement.execute();
         } catch(SQLException e) {
+            processor.getLogger().log(Level.SEVERE, "Ошибка!");
             e.printStackTrace();
             return false;
         }
     }
 
-    public boolean removeGreaterKey(String key) {
+    /**
+     * Исполнение команды removeGreaterKey
+     * @param key - ключ элемента
+     * @param commandData - объект с данными о команде
+     * @return - было ли успешно произведено действие
+     */
+    public boolean removeGreaterKey(String key, CommandData commandData) {
         try {
             preparedStatement = connection.prepareStatement("DELETE FROM people WHERE key > ? AND login = ?;");
             preparedStatement.setString(1, key);
-            preparedStatement.setString(2, processor.getCommandData().getLogin());
+            preparedStatement.setString(2, commandData.getLogin());
             return preparedStatement.execute();
         } catch(SQLException e) {
+            processor.getLogger().log(Level.SEVERE, "Ошибка!");
             e.printStackTrace();
             return false;
         }
     }
 
-    public boolean remove(String key) {
+    /**
+     * Удаление элемента из БД.
+     * @param key - ключ элемента
+     * @param commandData - объект с данными о команде
+     * @return - было ли успешно произведено действие
+     */
+    public boolean remove(String key, CommandData commandData) {
         try {
             preparedStatement = connection.prepareStatement("DELETE FROM people WHERE key = ? AND login = ?;");
             preparedStatement.setString(1, key);
-            preparedStatement.setString(2, processor.getCommandData().getLogin());
+            preparedStatement.setString(2, commandData.getLogin());
             preparedStatement.execute();
             return true;
         } catch(SQLException e) {
+            processor.getLogger().log(Level.SEVERE, "Ошибка!");
             e.printStackTrace();
             return false;
         }
     }
 
-    public boolean replaceIfLower(String key, int height) {
+    /**
+     * Исполнение команды replaceIfLower.
+     * @param key - ключ элемента
+     * @param height - введенный рост
+     * @param commandData - объект с данными о команде
+     * @return - было ли успешно произведено действие
+     */
+    public boolean replaceIfLower(String key, int height, CommandData commandData) {
         try {
             preparedStatement = connection.prepareStatement("SELECT * FROM people WHERE key = ? AND login = ?;");
             preparedStatement.setString(1, key);
-            preparedStatement.setString(2, processor.getCommandData().getLogin());
+            preparedStatement.setString(2, commandData.getLogin());
             ResultSet resultSet = preparedStatement.executeQuery();
             resultSet.next();
             if(resultSet.getInt("height") > height) {
                 preparedStatement = connection.prepareStatement("UPDATE people SET height = ? WHERE key = ? AND login = ?;");
                 preparedStatement.setInt(1, height);
                 preparedStatement.setString(2, key);
-                preparedStatement.setString(3, processor.getCommandData().getLogin());
+                preparedStatement.setString(3, commandData.getLogin());
                 preparedStatement.execute();
             }
             return true;
         } catch(SQLException e) {
+            processor.getLogger().log(Level.SEVERE, "Ошибка!");
             e.printStackTrace();
             return false;
         }
     }
 
+    /**
+     * Проверка легитимности пользователя.
+     * @param login - логин пользователя
+     * @param hashedPassword - пароль пользователя
+     * @return - было ли успешно произведено действие
+     */
     public boolean checkUser(String login, String hashedPassword) {
         try {
             preparedStatement = connection.prepareStatement("SELECT * FROM userdata WHERE login = ?;");
@@ -268,11 +274,17 @@ public class Database {
                 return false;
             }
         } catch(SQLException e) {
+            processor.getLogger().log(Level.SEVERE, "Ошибка!");
             e.printStackTrace();
             return false;
         }
     }
 
+    /**
+     * Получение ID элемента из последовательности в БД.
+     * @param key - ключ элемента
+     * @return - полученный ID
+     */
     public int gainId(String key) {
         try {
             preparedStatement = connection.prepareStatement("SELECT * FROM people WHERE key = ?;");
@@ -281,8 +293,17 @@ public class Database {
             resultSet.next();
             return resultSet.getInt("id");
         } catch (SQLException e) {
+            processor.getLogger().log(Level.SEVERE, "Ошибка!");
             e.printStackTrace();
             return 0;
         }
+    }
+
+    public Connection getConnection() {
+        return connection;
+    }
+
+    public MessageDigest getHash() {
+        return hash;
     }
 }

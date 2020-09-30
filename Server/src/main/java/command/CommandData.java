@@ -3,12 +3,23 @@ package command;
 import person.Person;
 
 import java.io.Serializable;
+import java.net.SocketAddress;
 
 public class CommandData implements Serializable {
     private static final long serialVersionUID = 1488L;
     private String name;
     private String param1;
     private String param2;
+
+    public SocketAddress getSocketAddress() {
+        return socketAddress;
+    }
+
+    public void setSocketAddress(SocketAddress socketAddress) {
+        this.socketAddress = socketAddress;
+    }
+
+    private SocketAddress socketAddress;
 
     public Person getPerson() {
         return person;

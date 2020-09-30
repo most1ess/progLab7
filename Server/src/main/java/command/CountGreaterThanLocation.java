@@ -8,20 +8,20 @@ import java.util.TreeMap;
 public class CountGreaterThanLocation extends Command {
     private TreeMap<String, Person> collection;
     private String location;
-    private String result;
     private Processor processor;
 
-    public CountGreaterThanLocation(Processor processor) {
-        synchronized (Processor.synchronizer) {
+    public CountGreaterThanLocation(Processor processor, CommandData commandData) {
+        synchronized (processor.getSynchronizer()) {
             collection = processor.getCollection().get();
         }
-        location = processor.getCommandData().getParam1();
+        location = commandData.getParam1();
         this.processor = processor;
     }
 
     @Override
     public String execute() {
-        synchronized (Processor.synchronizer) {
+        String result;
+        synchronized (processor.getSynchronizer()) {
             if (collection.isEmpty()) {
                 result = "Опа! А коллекция то пуста!\nНу и элементов, получается, нет таких!";
             } else {
@@ -30,7 +30,6 @@ public class CountGreaterThanLocation extends Command {
                     inputLocation = Long.parseLong(location);
                 } catch (NumberFormatException e) {
                     result = "Введённый вами аргумент должен быть числом!\n";
-                    processor.setResult(result);
                     return result;
                 }
                 long amount = collection.values().stream()
@@ -40,7 +39,6 @@ public class CountGreaterThanLocation extends Command {
                 result = ("Количество элементов с суммой координат location, больших чем " + location + ": " + amount + ".\n");
             }
         }
-        processor.setResult(result);
         return result;
     }
 }
