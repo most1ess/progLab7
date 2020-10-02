@@ -21,13 +21,16 @@ public class Receiver extends RecursiveAction {
      * @throws ClassNotFoundException - ошибка классов
      * @throws IOException - ошибка ввода вывода
      */
-    public static void receive(Processor processor) throws ClassNotFoundException, IOException {
+    public void receive(Processor processor) throws ClassNotFoundException, IOException {
         ByteBuffer buffer = ByteBuffer.allocate(5000);
         byte[] bufArray = buffer.array();
         CommandData commandData;
         SocketAddress socketAddress;
         socketAddress = processor.getDatagramChannel().receive(buffer);
-        processor.setThreadStatus(true);
+        synchronized (processor.getSynchronizer2()) {
+            processor.setThreadStatus(true);
+            processor.getSynchronizer2().notify();
+        }
         if(socketAddress == null) {
             return;
         }

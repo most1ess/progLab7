@@ -14,17 +14,23 @@ import java.util.logging.Logger;
 
 public class Processor {
     private final Object synchronizer = new Object();
-    private Logger logger;
-    private People collection = new People();
-    private DatagramChannel datagramChannel;
-    private boolean threadStatus = true;
-    private String result;
-    private ForkJoinPool receivePool = ForkJoinPool.commonPool();
-    private ExecutorService handlePool = Executors.newCachedThreadPool();
-    private Callable<String> task;
-    private ForkJoinPool sendPool = ForkJoinPool.commonPool();
-    private String fileName;
-    private Database database;
+
+    public Object getSynchronizer2() {
+        return synchronizer2;
+    }
+
+    private final Object synchronizer2 = new Object();
+    volatile private Logger logger;
+    volatile private People collection = new People();
+    volatile private DatagramChannel datagramChannel;
+    volatile private boolean threadStatus = true;
+    volatile private String result;
+    volatile private ForkJoinPool receivePool = ForkJoinPool.commonPool();
+    volatile private ExecutorService handlePool = Executors.newCachedThreadPool();
+    volatile private Callable<String> task;
+    volatile private ForkJoinPool sendPool = ForkJoinPool.commonPool();
+    volatile private String fileName;
+    volatile private Database database;
 
     /**
      * Создание лога работы сервера.
@@ -58,23 +64,29 @@ public class Processor {
         Connector.connect(this);
         if (!createDatabase()) System.exit(1);
         if (!database.load()) System.exit(1);
-        logger.log(Level.INFO,"Ожидание данных от клиента...");
+        logger.log(Level.INFO, "Ожидание данных от клиента...");
 
-        while(true) {
-            if(threadStatus) {
+        while (true) {
+            synchronized (synchronizer2) {
+                while (!threadStatus) {
+                    try {
+                        synchronizer2.wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
                 threadStatus = false;
-                launchThread();
             }
+            launchThread();
         }
     }
 
     public void launchThread() {
-        receivePool.invoke(new Receiver(this));
+        receivePool.execute(new Receiver(this));
     }
 
     /**
      * Обработка полученных от пользователя данных.
-     *
      */
     public void handle(CommandData commandData, SocketAddress socketAddress) {
         String name = commandData.getName();
@@ -143,6 +155,7 @@ public class Processor {
 
     /**
      * Подключение к БД.
+     *
      * @return - было ли успешно произведено действие
      */
     private boolean createDatabase() {
@@ -160,6 +173,7 @@ public class Processor {
 
     /**
      * Получение имени файла с данными для БД.
+     *
      * @return - было ли успешно произведено действие
      */
     private boolean unpackFileName() {

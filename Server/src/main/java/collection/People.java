@@ -7,8 +7,8 @@ import java.time.LocalDateTime;
 import java.util.TreeMap;
 
 public class People {
-    private TreeMap<String, Person> collection = new TreeMap<>();
-    private java.time.LocalDateTime creationDate;
+    volatile private TreeMap<String, Person> collection = new TreeMap<>();
+    volatile private java.time.LocalDateTime creationDate;
 
     public People() {
         setCreationDate();
