@@ -33,15 +33,16 @@ public class RemoveKey extends Command {
                 result = "Невозможно удалить элемент с заданным ключом. Коллекция уже пуста.\n";
             else if (!collection.containsKey(key))
                 result = "Элемента с таким ключом нет в коллекции! Попробуйте ввести другой ключ.\n";
-            else {
-                if (database.remove(key, commandData)) {
-                    collection.keySet().removeIf(k -> k.equals(key) && collection.get(k).getLogin().equals(login));
-                    result = ("Элемент с ключом " + key + " успешно удален!\n");
-                } else {
-                    result = "Не надо лезть в чужие элементы.\n";
-                }
+            else if (!collection.get(key).getLogin().equals(commandData.getLogin())) {
+                result = "Не надо лезть в чужие элементы.\n";
+            } else if (database.remove(key, commandData)) {
+                collection.keySet().removeIf(k -> k.equals(key) && collection.get(k).getLogin().equals(login));
+                result = ("Элемент с ключом " + key + " успешно удален!\n");
+            } else {
+                result = "Не надо лезть в чужие элементы.\n";
             }
         }
         return result;
     }
 }
+

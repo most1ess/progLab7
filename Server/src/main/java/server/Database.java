@@ -1,6 +1,7 @@
 package server;
 
 import collection.People;
+import command.Command;
 import command.CommandData;
 import person.Coordinates;
 import person.Location;

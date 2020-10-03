@@ -33,34 +33,30 @@ public class Update extends Command {
         this.commandData = commandData;
     }
 
-    private boolean exists() {
-        synchronized (processor.getSynchronizer()) {
-            return collection.containsKey(key);
-        }
-    }
-
     @Override
     public String execute() {
         String result;
-        if (!exists()) {
-            result = "Элемента с указанным ключом нет в коллекции.\n";
-        } else if (person == null) {
-            result = "Введите информацию о добавляемом элементе.\n";
-        } else {
-            if (person.getCreationDate() == null) {
-                result = "Элемент не был добавлен.\n";
-                return result;
-            }
-            int oldId = collection.get(key).getId();
-            person.setId(oldId);
-            if (database.remove(key, commandData) && database.put(key, person)) {
-                synchronized (processor.getSynchronizer()) {
+        synchronized (processor.getSynchronizer()) {
+            if (!collection.containsKey(key)) {
+                result = "Элемента с указанным ключом нет в коллекции.\n";
+            } else if (!collection.get(key).getLogin().equals(commandData.getLogin())) {
+                result = "Не надо лезть в чужие элементы.\n";
+            } else if (person == null) {
+                result = "Введите информацию о добавляемом элементе.\n";
+            } else {
+                if (person.getCreationDate() == null) {
+                    result = "Элемент не был добавлен.\n";
+                    return result;
+                }
+                int oldId = collection.get(key).getId();
+                person.setId(oldId);
+                if (database.remove(key, commandData) && database.put(key, person)) {
                     collection.remove(key);
                     collection.put(key, person);
                     processor.getCollection().set(collection);
-                }
-                result = "Элемент успешно изменён.\n";
-            } else result = "Во время изменения элемента произошла ошибка.\n";
+                    result = "Элемент успешно изменён.\n";
+                } else result = "Во время изменения элемента произошла ошибка.\n";
+            }
         }
         return result;
     }
